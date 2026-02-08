@@ -17,7 +17,17 @@ class ApiService {
     await prefs.setString('token', token);
   }
   
-  // Headers with auth
+  // Get user role from stored token (simplified)
+  static Future<String?> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userRole');
+  }
+  
+  // Save user role
+  static Future<void> saveUserRole(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userRole', role);
+  }
   static Future<Map<String, String>> getHeaders() async {
     final token = await getToken();
     return {
@@ -36,7 +46,13 @@ class ApiService {
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
     );
-    return jsonDecode(response.body);
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Login failed');
+    }
   }
   
   // Register Siswa
@@ -65,6 +81,7 @@ class ApiService {
     await http.post(Uri.parse('$baseUrl/logout'), headers: headers);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    await prefs.remove('userRole');
   }
   
   // ============ STAN ============

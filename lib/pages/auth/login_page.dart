@@ -39,12 +39,13 @@ class _LoginPageState extends State<LoginPage> {
         );
         
         if (response['success'] == true && response['token'] != null) {
-          // Save token
+          // Save token and role
           await ApiService.saveToken(response['token']);
+          final role = response['user']['role'];
+          await ApiService.saveUserRole(role);
           
           // Navigate based on role
           if (mounted) {
-            final role = response['user']['role'];
             if (role == 'admin_stan') {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const AdminHomePage()),

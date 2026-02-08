@@ -116,9 +116,7 @@ class DetailTransaksi {
       idTransaksi: json['id_transaksi'],
       idMenu: json['id_menu'],
       qty: json['qty'],
-      hargaBeli: (json['harga_beli'] is int) 
-          ? json['harga_beli'].toDouble() 
-          : json['harga_beli'].toDouble(),
+      hargaBeli: json['harga_beli'].toDouble(),
       namaMenu: json['nama_menu'],
     );
   }

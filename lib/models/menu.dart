@@ -47,7 +47,7 @@ class Menu {
     return Menu(
       id: json['id'],
       namaMakanan: json['nama_makanan'],
-      harga: (json['harga'] is int) ? json['harga'].toDouble() : json['harga'].toDouble(),
+      harga: json['harga'].toDouble(),
       jenis: jenis,
       foto: json['foto'],
       deskripsi: json['deskripsi'] ?? '',

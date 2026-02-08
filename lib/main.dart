@@ -17,6 +17,19 @@ class KantinSekolahApp extends StatefulWidget {
 }
 
 class _KantinSekolahAppState extends State<KantinSekolahApp> {
+  Future<Widget> _getInitialPage() async {
+    final token = await ApiService.getToken();
+    if (token != null) {
+      final role = await ApiService.getUserRole();
+      if (role == 'admin_stan') {
+        return const AdminHomePage();
+      } else {
+        return const SiswaHomePage();
+      }
+    }
+    return const LoginPage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -71,8 +84,8 @@ class _KantinSekolahAppState extends State<KantinSekolahApp> {
           ),
         ),
       ),
-      home: FutureBuilder<String?>(
-        future: ApiService.getToken(),
+      home: FutureBuilder<Widget>(
+        future: _getInitialPage(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -82,13 +95,7 @@ class _KantinSekolahAppState extends State<KantinSekolahApp> {
             );
           }
           
-          if (snapshot.hasData && snapshot.data != null) {
-            // Token exists, navigate to home (default to siswa home)
-            // In a real app, you'd verify the token and get user role
-            return const SiswaHomePage();
-          }
-          
-          return const LoginPage();
+          return snapshot.data ?? const LoginPage();
         },
       ),
     );
