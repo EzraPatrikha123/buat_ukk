@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'utils/app_colors.dart';
+import 'services/api_service.dart';
 import 'pages/auth/login_page.dart';
+import 'pages/siswa/home_page.dart';
+import 'pages/admin/admin_home_page.dart';
 
 void main() {
   runApp(const KantinSekolahApp());
 }
 
-class KantinSekolahApp extends StatelessWidget {
+class KantinSekolahApp extends StatefulWidget {
   const KantinSekolahApp({super.key});
 
+  @override
+  State<KantinSekolahApp> createState() => _KantinSekolahAppState();
+}
+
+class _KantinSekolahAppState extends State<KantinSekolahApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -63,11 +71,26 @@ class KantinSekolahApp extends StatelessWidget {
           ),
         ),
       ),
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginPage(),
-      },
-      home: const LoginPage(),
+      home: FutureBuilder<String?>(
+        future: ApiService.getToken(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          
+          if (snapshot.hasData && snapshot.data != null) {
+            // Token exists, navigate to home (default to siswa home)
+            // In a real app, you'd verify the token and get user role
+            return const SiswaHomePage();
+          }
+          
+          return const LoginPage();
+        },
+      ),
     );
   }
 }
