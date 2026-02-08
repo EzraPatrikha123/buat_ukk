@@ -44,15 +44,15 @@ class _KantinSekolahAppState extends State<KantinSekolahApp> {
           secondary: AppColors.darkRed,
         ),
         useMaterial3: true,
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.primaryRed,
           foregroundColor: AppColors.white,
           elevation: 0,
         ),
-        cardTheme: CardTheme(
+        cardTheme: const CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
           color: AppColors.white,
         ),

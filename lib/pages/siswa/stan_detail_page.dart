@@ -69,9 +69,6 @@ class _StanDetailPageState extends State<StanDetailPage> {
     // Note: API should provide menu_diskon mapping
     // For now, we'll return null since we don't have the mapping
     return null;
-    if (diskon == null || !diskon.isActive) return null;
-    
-    return diskon;
   }
 
   void _addToCart(Menu menu) {
