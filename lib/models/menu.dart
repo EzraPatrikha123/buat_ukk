@@ -41,17 +41,30 @@ class Menu {
     } else {
       jenis = JenisMenu.values.firstWhere(
         (e) => e.toString() == json['jenis'],
+        orElse: () => JenisMenu.makanan,
       );
     }
     
+    // Parse harga to double, handling int and string types
+    double harga;
+    if (json['harga'] is int) {
+      harga = (json['harga'] as int).toDouble();
+    } else if (json['harga'] is double) {
+      harga = json['harga'] as double;
+    } else if (json['harga'] is String) {
+      harga = double.tryParse(json['harga']) ?? 0.0;
+    } else {
+      harga = 0.0;
+    }
+    
     return Menu(
-      id: json['id'],
-      namaMakanan: json['nama_makanan'],
-      harga: json['harga'].toDouble(),
+      id: json['id'] ?? 0,
+      namaMakanan: json['nama_makanan'] ?? '',
+      harga: harga,
       jenis: jenis,
       foto: json['foto'],
       deskripsi: json['deskripsi'] ?? '',
-      idStan: json['id_stan'],
+      idStan: json['id_stan'] ?? 0,
     );
   }
 }

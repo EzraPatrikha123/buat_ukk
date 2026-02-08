@@ -30,11 +30,15 @@ class Diskon {
 
   factory Diskon.fromJson(Map<String, dynamic> json) {
     return Diskon(
-      id: json['id'],
-      namaDiskon: json['nama_diskon'],
-      persentaseDiskon: json['persentase_diskon'],
-      tanggalAwal: DateTime.parse(json['tanggal_awal']),
-      tanggalAkhir: DateTime.parse(json['tanggal_akhir']),
+      id: json['id'] ?? 0,
+      namaDiskon: json['nama_diskon'] ?? '',
+      persentaseDiskon: json['persentase_diskon'] ?? 0,
+      tanggalAwal: json['tanggal_awal'] != null 
+          ? DateTime.parse(json['tanggal_awal']) 
+          : DateTime.now(),
+      tanggalAkhir: json['tanggal_akhir'] != null 
+          ? DateTime.parse(json['tanggal_akhir']) 
+          : DateTime.now(),
     );
   }
 }
@@ -60,9 +64,9 @@ class MenuDiskon {
 
   factory MenuDiskon.fromJson(Map<String, dynamic> json) {
     return MenuDiskon(
-      id: json['id'],
-      idMenu: json['id_menu'],
-      idDiskon: json['id_diskon'],
+      id: json['id'] ?? 0,
+      idMenu: json['id_menu'] ?? 0,
+      idDiskon: json['id_diskon'] ?? 0,
     );
   }
 }

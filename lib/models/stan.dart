@@ -25,11 +25,11 @@ class Stan {
 
   factory Stan.fromJson(Map<String, dynamic> json) {
     return Stan(
-      id: json['id'],
-      namaStan: json['nama_stan'],
-      namaPemilik: json['nama_pemilik'],
-      telp: json['telp'],
-      idUser: json['id_user'],
+      id: json['id'] ?? 0,
+      namaStan: json['nama_stan'] ?? '',
+      namaPemilik: json['nama_pemilik'] ?? '',
+      telp: json['telp'] ?? '',
+      idUser: json['id_user'] ?? 0,
     );
   }
 }
