@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/app_colors.dart';
+import '../../utils/app_colors.dart';
+import '../../services/api_service.dart';
 import '../siswa/home_page.dart';
 import '../admin/admin_home_page.dart';
 import 'register_page.dart';
@@ -16,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,20 +26,61 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      final username = _usernameController.text;
+      setState(() {
+        _isLoading = true;
+      });
       
-      // Login logic: if username == "admin", navigate to AdminHomePage
-      // Otherwise, navigate to SiswaHomePage
-      if (username == "admin") {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const AdminHomePage()),
+      try {
+        final response = await ApiService.login(
+          _usernameController.text,
+          _passwordController.text,
         );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const SiswaHomePage()),
-        );
+        
+        if (response['success'] == true && response['token'] != null) {
+          // Save token and role
+          await ApiService.saveToken(response['token']);
+          final role = response['user']['role'];
+          await ApiService.saveUserRole(role);
+          
+          // Navigate based on role
+          if (mounted) {
+            if (role == 'admin_stan') {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const AdminHomePage()),
+              );
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const SiswaHomePage()),
+              );
+            }
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(response['message'] ?? 'Login gagal'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -155,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
                   
                   // Login button
                   ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryRed,
                       foregroundColor: AppColors.white,
@@ -165,10 +208,19 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       elevation: 2,
                     ),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Login',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                   ),
                   const SizedBox(height: 16),
                   

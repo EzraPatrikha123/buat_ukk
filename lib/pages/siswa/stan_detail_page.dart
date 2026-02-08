@@ -4,6 +4,7 @@ import '../../utils/app_colors.dart';
 import '../../models/stan.dart';
 import '../../models/menu.dart';
 import '../../models/diskon.dart';
+import '../../services/api_service.dart';
 import 'cart_page.dart';
 
 class StanDetailPage extends StatefulWidget {
@@ -19,48 +20,39 @@ class _StanDetailPageState extends State<StanDetailPage> {
   String _selectedCategory = 'Semua';
   final Map<int, int> _cart = {};
   
-  // Mock menu data
-  late final List<Menu> _allMenus;
-  late final List<Diskon> _diskons;
-  late final List<MenuDiskon> _menuDiskons;
+  List<Menu> _allMenus = [];
+  List<Diskon> _diskons = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initMockData();
+    _loadData();
   }
 
-  void _initMockData() {
-    _allMenus = [
-      Menu(id: 1, namaMakanan: 'Nasi Goreng', harga: 15000, jenis: JenisMenu.makanan, deskripsi: 'Nasi goreng spesial dengan telur', idStan: widget.stan.id),
-      Menu(id: 2, namaMakanan: 'Mie Goreng', harga: 12000, jenis: JenisMenu.makanan, deskripsi: 'Mie goreng pedas', idStan: widget.stan.id),
-      Menu(id: 3, namaMakanan: 'Es Teh Manis', harga: 3000, jenis: JenisMenu.minuman, deskripsi: 'Teh manis segar', idStan: widget.stan.id),
-      Menu(id: 4, namaMakanan: 'Jeruk Panas', harga: 5000, jenis: JenisMenu.minuman, deskripsi: 'Jeruk hangat nikmat', idStan: widget.stan.id),
-      Menu(id: 5, namaMakanan: 'Bakso', harga: 10000, jenis: JenisMenu.makanan, deskripsi: 'Bakso kuah dengan mie', idStan: widget.stan.id),
-      Menu(id: 6, namaMakanan: 'Soto Ayam', harga: 13000, jenis: JenisMenu.makanan, deskripsi: 'Soto ayam bumbu kuning', idStan: widget.stan.id),
-    ];
-
-    _diskons = [
-      Diskon(
-        id: 1,
-        namaDiskon: 'Diskon 20%',
-        persentaseDiskon: 20,
-        tanggalAwal: DateTime.now().subtract(const Duration(days: 5)),
-        tanggalAkhir: DateTime.now().add(const Duration(days: 10)),
-      ),
-      Diskon(
-        id: 2,
-        namaDiskon: 'Diskon 15%',
-        persentaseDiskon: 15,
-        tanggalAwal: DateTime.now().subtract(const Duration(days: 3)),
-        tanggalAkhir: DateTime.now().add(const Duration(days: 7)),
-      ),
-    ];
-
-    _menuDiskons = [
-      MenuDiskon(id: 1, idMenu: 1, idDiskon: 1), // Nasi Goreng 20% off
-      MenuDiskon(id: 2, idMenu: 3, idDiskon: 2), // Es Teh 15% off
-    ];
+  Future<void> _loadData() async {
+    try {
+      final menuData = await ApiService.getMenuByStan(widget.stan.id);
+      final diskonData = await ApiService.getActiveDiskon();
+      
+      setState(() {
+        _allMenus = menuData.map((json) => Menu.fromJson(json)).toList();
+        _diskons = diskonData.map((json) => Diskon.fromJson(json)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   List<Menu> get _filteredMenus {
@@ -74,10 +66,9 @@ class _StanDetailPageState extends State<StanDetailPage> {
   }
 
   Diskon? _getActiveDiscount(int menuId) {
-    final menuDiskon = _menuDiskons.where((md) => md.idMenu == menuId).firstOrNull;
-    if (menuDiskon == null) return null;
-    
-    final diskon = _diskons.where((d) => d.id == menuDiskon.idDiskon).firstOrNull;
+    // Note: API should provide menu_diskon mapping
+    // For now, we'll return null since we don't have the mapping
+    return null;
     if (diskon == null || !diskon.isActive) return null;
     
     return diskon;
@@ -103,6 +94,18 @@ class _StanDetailPageState extends State<StanDetailPage> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: Text(widget.stan.namaStan),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -149,7 +152,6 @@ class _StanDetailPageState extends State<StanDetailPage> {
                             menus: _allMenus,
                             stan: widget.stan,
                             diskons: _diskons,
-                            menuDiskons: _menuDiskons,
                           ),
                         ),
                       );

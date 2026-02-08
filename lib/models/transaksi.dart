@@ -32,14 +32,53 @@ class Transaksi {
   }
 
   factory Transaksi.fromJson(Map<String, dynamic> json) {
+    // Parse status from string to enum
+    StatusTransaksi status;
+    if (json['status'] is String) {
+      final statusStr = json['status'].toLowerCase().replaceAll(' ', '_');
+      switch (statusStr) {
+        case 'belum_dikonfirm':
+        case 'belum dikonfirm':
+          status = StatusTransaksi.belum_dikonfirm;
+          break;
+        case 'dimasak':
+          status = StatusTransaksi.dimasak;
+          break;
+        case 'diantar':
+          status = StatusTransaksi.diantar;
+          break;
+        case 'sampai':
+          status = StatusTransaksi.sampai;
+          break;
+        default:
+          status = StatusTransaksi.belum_dikonfirm;
+      }
+    } else {
+      status = StatusTransaksi.values.firstWhere(
+        (e) => e.toString() == json['status'],
+        orElse: () => StatusTransaksi.belum_dikonfirm,
+      );
+    }
+    
+    // Parse detail if available
+    List<DetailTransaksi> details = [];
+    if (json['detail'] != null && json['detail'] is List) {
+      details = (json['detail'] as List)
+          .map((d) => DetailTransaksi.fromJson(d))
+          .toList();
+    } else if (json['detail_transaksi'] != null && json['detail_transaksi'] is List) {
+      details = (json['detail_transaksi'] as List)
+          .map((d) => DetailTransaksi.fromJson(d))
+          .toList();
+    }
+    
     return Transaksi(
       id: json['id'],
       tanggal: DateTime.parse(json['tanggal']),
       idStan: json['id_stan'],
       idSiswa: json['id_siswa'],
-      status: StatusTransaksi.values.firstWhere(
-        (e) => e.toString() == json['status'],
-      ),
+      status: status,
+      detailTransaksi: details,
     );
   }
 }
@@ -78,6 +117,7 @@ class DetailTransaksi {
       idMenu: json['id_menu'],
       qty: json['qty'],
       hargaBeli: json['harga_beli'].toDouble(),
+      namaMenu: json['nama_menu'],
     );
   }
 }

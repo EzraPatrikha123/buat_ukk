@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_colors.dart';
+import '../../services/api_service.dart';
+import '../auth/login_page.dart';
 import 'manage_menu_page.dart';
 import 'manage_pelanggan_page.dart';
 import 'orders_page.dart';
@@ -19,7 +21,7 @@ class AdminHomePage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
+            onPressed: () async {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -31,9 +33,26 @@ class AdminHomePage extends StatelessWidget {
                       child: const Text('Batal'),
                     ),
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.of(context).pop();
-                        Navigator.of(context).pushReplacementNamed('/login');
+                        try {
+                          await ApiService.logout();
+                          if (context.mounted) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const LoginPage()),
+                              (route) => false,
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryRed,

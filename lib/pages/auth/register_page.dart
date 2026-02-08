@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_colors.dart';
 import '../../models/user.dart';
+import '../../services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -17,10 +18,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final _namaController = TextEditingController();
   final _alamatController = TextEditingController();
   final _telpController = TextEditingController();
+  final _namaStanController = TextEditingController();
   
   UserRole _selectedRole = UserRole.siswa;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -30,19 +33,71 @@ class _RegisterPageState extends State<RegisterPage> {
     _namaController.dispose();
     _alamatController.dispose();
     _telpController.dispose();
+    _namaStanController.dispose();
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
-      // In a real app, this would save to backend
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Registrasi berhasil! Silakan login.'),
-          backgroundColor: AppColors.primaryRed,
-        ),
-      );
-      Navigator.of(context).pop();
+      setState(() {
+        _isLoading = true;
+      });
+      
+      try {
+        Map<String, dynamic> response;
+        
+        if (_selectedRole == UserRole.siswa) {
+          response = await ApiService.registerSiswa({
+            'username': _usernameController.text,
+            'password': _passwordController.text,
+            'nama_siswa': _namaController.text,
+            'alamat': _alamatController.text,
+            'telp': _telpController.text,
+          });
+        } else {
+          response = await ApiService.registerAdmin({
+            'username': _usernameController.text,
+            'password': _passwordController.text,
+            'nama_pemilik': _namaController.text,
+            'nama_stan': _namaStanController.text,
+            'telp': _telpController.text,
+          });
+        }
+        
+        if (mounted) {
+          if (response['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Registrasi berhasil! Silakan login.'),
+                backgroundColor: AppColors.primaryRed,
+              ),
+            );
+            Navigator.of(context).pop();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(response['message'] ?? 'Registrasi gagal'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
@@ -188,6 +243,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 // Alamat / Nama Stan
                 if (_selectedRole == UserRole.admin_stan)
                   TextFormField(
+                    controller: _namaStanController,
                     decoration: InputDecoration(
                       labelText: 'Nama Stan',
                       prefixIcon: Icon(Icons.store, color: AppColors.primaryRed),
@@ -361,7 +417,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 
                 // Register button
                 ElevatedButton(
-                  onPressed: _register,
+                  onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryRed,
                     foregroundColor: AppColors.white,
@@ -371,10 +427,19 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     elevation: 2,
                   ),
-                  child: const Text(
-                    'Daftar',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Daftar',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
                 const SizedBox(height: 24),
               ],

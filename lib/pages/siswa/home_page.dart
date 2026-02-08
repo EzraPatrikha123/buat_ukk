@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_colors.dart';
 import '../../models/stan.dart';
+import '../../services/api_service.dart';
+import '../auth/login_page.dart';
 import 'stan_detail_page.dart';
 import 'order_status_page.dart';
 import 'history_page.dart';
@@ -15,14 +17,57 @@ class SiswaHomePage extends StatefulWidget {
 class _SiswaHomePageState extends State<SiswaHomePage> {
   int _selectedIndex = 0;
   final _searchController = TextEditingController();
+  List<Stan> _stans = [];
+  bool _isLoading = true;
 
-  // Mock data
-  final List<Stan> _stans = [
-    Stan(id: 1, namaStan: 'Stan Makanan Bu Ani', namaPemilik: 'Bu Ani', telp: '08123456789', idUser: 2),
-    Stan(id: 2, namaStan: 'Stan Minuman Pak Budi', namaPemilik: 'Pak Budi', telp: '08234567890', idUser: 3),
-    Stan(id: 3, namaStan: 'Stan Snack & Jajanan', namaPemilik: 'Bu Citra', telp: '08345678901', idUser: 4),
-    Stan(id: 4, namaStan: 'Stan Nasi Goreng', namaPemilik: 'Pak Dodi', telp: '08456789012', idUser: 5),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadStans();
+  }
+
+  Future<void> _loadStans() async {
+    try {
+      final data = await ApiService.getAllStan();
+      setState(() {
+        _stans = data.map((json) => Stan.fromJson(json)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      await ApiService.logout();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -37,6 +82,12 @@ class _SiswaHomePageState extends State<SiswaHomePage> {
   }
 
   Widget _buildHomePage() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return CustomScrollView(
       slivers: [
         // App Bar
@@ -46,20 +97,8 @@ class _SiswaHomePageState extends State<SiswaHomePage> {
           title: const Text('Kantin Sekolah'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.notifications),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifikasi')),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profil')),
-                );
-              },
+              icon: const Icon(Icons.logout),
+              onPressed: _logout,
             ),
           ],
         ),
