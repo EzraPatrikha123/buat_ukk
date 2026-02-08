@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_colors.dart';
 import '../../models/transaksi.dart';
+import '../../services/api_service.dart';
 import 'receipt_page.dart';
 
 class OrderStatusPage extends StatefulWidget {
@@ -12,41 +13,40 @@ class OrderStatusPage extends StatefulWidget {
 }
 
 class _OrderStatusPageState extends State<OrderStatusPage> {
-  // Mock data
-  final List<Transaksi> _orders = [
-    Transaksi(
-      id: 1,
-      tanggal: DateTime.now().subtract(const Duration(minutes: 15)),
-      idStan: 1,
-      idSiswa: 1,
-      status: StatusTransaksi.dimasak,
-      detailTransaksi: [
-        DetailTransaksi(id: 1, idTransaksi: 1, idMenu: 1, qty: 2, hargaBeli: 15000, namaMenu: 'Nasi Goreng'),
-        DetailTransaksi(id: 2, idTransaksi: 1, idMenu: 3, qty: 1, hargaBeli: 3000, namaMenu: 'Es Teh Manis'),
-      ],
-    ),
-    Transaksi(
-      id: 2,
-      tanggal: DateTime.now().subtract(const Duration(hours: 1)),
-      idStan: 2,
-      idSiswa: 1,
-      status: StatusTransaksi.diantar,
-      detailTransaksi: [
-        DetailTransaksi(id: 3, idTransaksi: 2, idMenu: 5, qty: 1, hargaBeli: 10000, namaMenu: 'Bakso'),
-      ],
-    ),
-    Transaksi(
-      id: 3,
-      tanggal: DateTime.now().subtract(const Duration(minutes: 5)),
-      idStan: 1,
-      idSiswa: 1,
-      status: StatusTransaksi.belum_dikonfirm,
-      detailTransaksi: [
-        DetailTransaksi(id: 4, idTransaksi: 3, idMenu: 2, qty: 1, hargaBeli: 12000, namaMenu: 'Mie Goreng'),
-        DetailTransaksi(id: 5, idTransaksi: 3, idMenu: 4, qty: 2, hargaBeli: 5000, namaMenu: 'Jeruk Panas'),
-      ],
-    ),
-  ];
+  List<Transaksi> _orders = [];
+  bool _isLoading = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadOrders();
+  }
+
+  Future<void> _loadOrders() async {
+    try {
+      final data = await ApiService.getTransaksiSiswa();
+      setState(() {
+        // Filter only active orders (not completed)
+        _orders = data
+            .map((json) => Transaksi.fromJson(json))
+            .where((t) => t.status != StatusTransaksi.sampai)
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   String _getStatusLabel(StatusTransaksi status) {
     switch (status) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_colors.dart';
 import '../../models/transaksi.dart';
+import '../../services/api_service.dart';
 import 'receipt_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -13,41 +14,36 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   String _selectedMonth = DateFormat('MMMM yyyy').format(DateTime.now());
+  List<Transaksi> _allTransactions = [];
+  bool _isLoading = true;
   
-  // Mock transaction history
-  final List<Transaksi> _allTransactions = [
-    Transaksi(
-      id: 1,
-      tanggal: DateTime.now().subtract(const Duration(days: 1)),
-      idStan: 1,
-      idSiswa: 1,
-      status: StatusTransaksi.sampai,
-      detailTransaksi: [
-        DetailTransaksi(id: 1, idTransaksi: 1, idMenu: 1, qty: 2, hargaBeli: 15000, namaMenu: 'Nasi Goreng'),
-        DetailTransaksi(id: 2, idTransaksi: 1, idMenu: 3, qty: 1, hargaBeli: 3000, namaMenu: 'Es Teh Manis'),
-      ],
-    ),
-    Transaksi(
-      id: 2,
-      tanggal: DateTime.now().subtract(const Duration(days: 3)),
-      idStan: 2,
-      idSiswa: 1,
-      status: StatusTransaksi.sampai,
-      detailTransaksi: [
-        DetailTransaksi(id: 3, idTransaksi: 2, idMenu: 5, qty: 1, hargaBeli: 10000, namaMenu: 'Bakso'),
-        DetailTransaksi(id: 4, idTransaksi: 2, idMenu: 4, qty: 2, hargaBeli: 5000, namaMenu: 'Jeruk Panas'),
-      ],
-    ),
-    Transaksi(
-      id: 3,
-      tanggal: DateTime.now().subtract(const Duration(days: 7)),
-      idStan: 1,
-      idSiswa: 1,
-      status: StatusTransaksi.sampai,
-      detailTransaksi: [
-        DetailTransaksi(id: 5, idTransaksi: 3, idMenu: 2, qty: 1, hargaBeli: 12000, namaMenu: 'Mie Goreng'),
-      ],
-    ),
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final data = await ApiService.getTransaksiSiswa();
+      setState(() {
+        _allTransactions = data.map((json) => Transaksi.fromJson(json)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
     Transaksi(
       id: 4,
       tanggal: DateTime(2026, 1, 15),

@@ -4,7 +4,7 @@ import '../../utils/app_colors.dart';
 import '../../models/menu.dart';
 import '../../models/stan.dart';
 import '../../models/diskon.dart';
-import '../../models/transaksi.dart';
+import '../../services/api_service.dart';
 import 'order_status_page.dart';
 
 class CartPage extends StatefulWidget {
@@ -12,7 +12,6 @@ class CartPage extends StatefulWidget {
   final List<Menu> menus;
   final Stan stan;
   final List<Diskon> diskons;
-  final List<MenuDiskon> menuDiskons;
 
   const CartPage({
     super.key,
@@ -20,7 +19,6 @@ class CartPage extends StatefulWidget {
     required this.menus,
     required this.stan,
     required this.diskons,
-    required this.menuDiskons,
   });
 
   @override
@@ -29,6 +27,7 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   late Map<int, int> _cart;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -37,13 +36,9 @@ class _CartPageState extends State<CartPage> {
   }
 
   Diskon? _getActiveDiscount(int menuId) {
-    final menuDiskon = widget.menuDiskons.where((md) => md.idMenu == menuId).firstOrNull;
-    if (menuDiskon == null) return null;
-    
-    final diskon = widget.diskons.where((d) => d.id == menuDiskon.idDiskon).firstOrNull;
-    if (diskon == null || !diskon.isActive) return null;
-    
-    return diskon;
+    // Note: API should provide menu_diskon mapping
+    // For now, we'll return null since we don't have the mapping
+    return null;
   }
 
   double _getMenuPrice(Menu menu) {
@@ -74,7 +69,7 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  void _checkout() {
+  Future<void> _checkout() async {
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keranjang kosong')),
@@ -94,19 +89,68 @@ class _CartPageState extends State<CartPage> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              Navigator.of(context).pop(); // Go back to stan detail
-              Navigator.of(context).pop(); // Go back to home
               
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Pesanan berhasil! Cek status pesanan Anda.'),
-                  backgroundColor: AppColors.primaryRed,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              setState(() {
+                _isProcessing = true;
+              });
+              
+              try {
+                // Prepare order data
+                final details = _cart.entries.map((entry) {
+                  final menu = widget.menus.firstWhere((m) => m.id == entry.key);
+                  return {
+                    'id_menu': entry.key,
+                    'qty': entry.value,
+                    'harga_beli': menu.harga,
+                  };
+                }).toList();
+                
+                final orderData = {
+                  'id_stan': widget.stan.id,
+                  'detail': details,
+                };
+                
+                final response = await ApiService.createTransaksi(orderData);
+                
+                if (mounted) {
+                  if (response['success'] == true) {
+                    Navigator.of(context).pop(); // Go back to stan detail
+                    Navigator.of(context).pop(); // Go back to home
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Pesanan berhasil! Cek status pesanan Anda.'),
+                        backgroundColor: AppColors.primaryRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(response['message'] ?? 'Checkout gagal'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() {
+                    _isProcessing = false;
+                  });
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryRed,
