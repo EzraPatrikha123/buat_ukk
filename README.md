@@ -105,6 +105,7 @@ flutter run
 - Gray: `#808080`
 - Dark Red: `#B71C1C`
 - Background: `#F5F5F5`
+- Black: `#212121`
 
 ## Technologies Used
 
