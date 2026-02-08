@@ -32,15 +32,25 @@ class Menu {
   }
 
   factory Menu.fromJson(Map<String, dynamic> json) {
+    // Parse jenis from string to enum
+    JenisMenu jenis;
+    if (json['jenis'] is String) {
+      jenis = json['jenis'].toLowerCase() == 'makanan' 
+          ? JenisMenu.makanan 
+          : JenisMenu.minuman;
+    } else {
+      jenis = JenisMenu.values.firstWhere(
+        (e) => e.toString() == json['jenis'],
+      );
+    }
+    
     return Menu(
       id: json['id'],
       namaMakanan: json['nama_makanan'],
-      harga: json['harga'].toDouble(),
-      jenis: JenisMenu.values.firstWhere(
-        (e) => e.toString() == json['jenis'],
-      ),
+      harga: (json['harga'] is int) ? json['harga'].toDouble() : json['harga'].toDouble(),
+      jenis: jenis,
       foto: json['foto'],
-      deskripsi: json['deskripsi'],
+      deskripsi: json['deskripsi'] ?? '',
       idStan: json['id_stan'],
     );
   }

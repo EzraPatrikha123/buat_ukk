@@ -23,13 +23,27 @@ class User {
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Parse role from string to enum
+    UserRole role;
+    if (json['role'] is String) {
+      final roleStr = json['role'].toLowerCase();
+      if (roleStr.contains('admin')) {
+        role = UserRole.admin_stan;
+      } else {
+        role = UserRole.siswa;
+      }
+    } else {
+      role = UserRole.values.firstWhere(
+        (e) => e.toString() == json['role'],
+        orElse: () => UserRole.siswa,
+      );
+    }
+    
     return User(
       id: json['id'],
       username: json['username'],
-      password: json['password'],
-      role: UserRole.values.firstWhere(
-        (e) => e.toString() == json['role'],
-      ),
+      password: json['password'] ?? '',
+      role: role,
     );
   }
 }
