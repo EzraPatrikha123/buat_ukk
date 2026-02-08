@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_colors.dart';
 import '../../models/menu.dart';
+import '../../services/api_service.dart';
 
 class ManageMenuPage extends StatefulWidget {
   const ManageMenuPage({super.key});
@@ -11,12 +12,61 @@ class ManageMenuPage extends StatefulWidget {
 }
 
 class _ManageMenuPageState extends State<ManageMenuPage> {
-  final List<Menu> _menus = [
-    Menu(id: 1, namaMakanan: 'Nasi Goreng', harga: 15000, jenis: JenisMenu.makanan, deskripsi: 'Nasi goreng spesial dengan telur', idStan: 1),
-    Menu(id: 2, namaMakanan: 'Mie Goreng', harga: 12000, jenis: JenisMenu.makanan, deskripsi: 'Mie goreng pedas', idStan: 1),
-    Menu(id: 3, namaMakanan: 'Es Teh Manis', harga: 3000, jenis: JenisMenu.minuman, deskripsi: 'Teh manis segar', idStan: 1),
-    Menu(id: 4, namaMakanan: 'Jeruk Panas', harga: 5000, jenis: JenisMenu.minuman, deskripsi: 'Jeruk hangat nikmat', idStan: 1),
-  ];
+  List<Menu> _menus = [];
+  bool _isLoading = true;
+  int _stanId = 1; // This should come from logged in user's stan
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMenus();
+  }
+
+  Future<void> _loadMenus() async {
+    try {
+      final data = await ApiService.getMenuByStan(_stanId);
+      setState(() {
+        _menus = data.map((json) => Menu.fromJson(json)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteMenu(int id) async {
+    try {
+      await ApiService.deleteMenu(id);
+      await _loadMenus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Menu berhasil dihapus'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   void _showMenuDialog({Menu? menu}) {
     final isEdit = menu != null;
@@ -88,36 +138,47 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (namaController.text.isNotEmpty && hargaController.text.isNotEmpty) {
-                  setState(() {
-                    if (isEdit) {
-                      final index = _menus.indexWhere((m) => m.id == menu.id);
-                      _menus[index] = Menu(
-                        id: menu.id,
-                        namaMakanan: namaController.text,
-                        harga: double.parse(hargaController.text),
-                        jenis: selectedJenis,
-                        deskripsi: deskripsiController.text,
-                        idStan: 1,
-                      );
-                    } else {
-                      _menus.add(Menu(
-                        id: _menus.length + 1,
-                        namaMakanan: namaController.text,
-                        harga: double.parse(hargaController.text),
-                        jenis: selectedJenis,
-                        deskripsi: deskripsiController.text,
-                        idStan: 1,
-                      ));
-                    }
-                  });
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isEdit ? 'Menu berhasil diupdate' : 'Menu berhasil ditambahkan'),
-                      backgroundColor: AppColors.primaryRed,
-                    ),
+                  
+                  try {
+                    final menuData = {
+                      'nama_makanan': namaController.text,
+                      'harga': double.parse(hargaController.text),
+                      'jenis': selectedJenis == JenisMenu.makanan ? 'makanan' : 'minuman',
+                      'deskripsi': deskripsiController.text,
+                      'id_stan': _stanId,
+                    };
+                    
+                    if (isEdit) {
+                      await ApiService.updateMenu(menu.id, menuData);
+                    } else {
+                      await ApiService.createMenu(menuData);
+                    }
+                    
+                    await _loadMenus();
+                    
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(isEdit ? 'Menu berhasil diupdate' : 'Menu berhasil ditambahkan'),
+                          backgroundColor: AppColors.primaryRed,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
                   );
                 }
               },
@@ -132,7 +193,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     );
   }
 
-  void _deleteMenu(Menu menu) {
+  void _confirmDeleteMenu(Menu menu) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -144,17 +205,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _menus.removeWhere((m) => m.id == menu.id);
-              });
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Menu berhasil dihapus'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              await _deleteMenu(menu.id);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -234,7 +287,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteMenu(menu),
+                    onPressed: () => _confirmDeleteMenu(menu),
                   ),
                 ],
               ),

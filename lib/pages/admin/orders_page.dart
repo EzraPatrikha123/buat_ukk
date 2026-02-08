@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_colors.dart';
 import '../../models/transaksi.dart';
+import '../../services/api_service.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -12,41 +13,61 @@ class OrdersPage extends StatefulWidget {
 
 class _OrdersPageState extends State<OrdersPage> {
   String _selectedMonth = DateFormat('MMMM yyyy').format(DateTime.now());
+  List<Transaksi> _allOrders = [];
+  bool _isLoading = true;
 
-  final List<Transaksi> _allOrders = [
-    Transaksi(
-      id: 1,
-      tanggal: DateTime.now().subtract(const Duration(hours: 2)),
-      idStan: 1,
-      idSiswa: 1,
-      status: StatusTransaksi.belum_dikonfirm,
-      detailTransaksi: [
-        DetailTransaksi(id: 1, idTransaksi: 1, idMenu: 1, qty: 2, hargaBeli: 15000, namaMenu: 'Nasi Goreng'),
-        DetailTransaksi(id: 2, idTransaksi: 1, idMenu: 3, qty: 1, hargaBeli: 3000, namaMenu: 'Es Teh Manis'),
-      ],
-    ),
-    Transaksi(
-      id: 2,
-      tanggal: DateTime.now().subtract(const Duration(hours: 3)),
-      idStan: 1,
-      idSiswa: 2,
-      status: StatusTransaksi.dimasak,
-      detailTransaksi: [
-        DetailTransaksi(id: 3, idTransaksi: 2, idMenu: 2, qty: 1, hargaBeli: 12000, namaMenu: 'Mie Goreng'),
-      ],
-    ),
-    Transaksi(
-      id: 3,
-      tanggal: DateTime.now().subtract(const Duration(hours: 1)),
-      idStan: 1,
-      idSiswa: 3,
-      status: StatusTransaksi.diantar,
-      detailTransaksi: [
-        DetailTransaksi(id: 4, idTransaksi: 3, idMenu: 1, qty: 1, hargaBeli: 15000, namaMenu: 'Nasi Goreng'),
-        DetailTransaksi(id: 5, idTransaksi: 3, idMenu: 4, qty: 2, hargaBeli: 5000, namaMenu: 'Jeruk Panas'),
-      ],
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadOrders();
+  }
+
+  Future<void> _loadOrders() async {
+    try {
+      final data = await ApiService.getTransaksiStan();
+      setState(() {
+        _allOrders = data.map((json) => Transaksi.fromJson(json)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateOrderStatus(int orderId, StatusTransaksi newStatus) async {
+    try {
+      final statusStr = newStatus.toString().split('.').last;
+      await ApiService.updateStatusTransaksi(orderId, statusStr);
+      await _loadOrders();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Status pesanan berhasil diupdate'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   List<String> get _availableMonths {
     final months = <String>{};
